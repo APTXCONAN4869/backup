@@ -2,16 +2,16 @@
 # SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-'''
+import os
+print("Current directory:", os.getcwd())
 try:
     import sionna
 except ImportError as e:
     import sys
-    sys.path.append("..")
-    import sionna
-'''
-import sys
-sys.path.insert(0, 'D:\sionna-main')
+    sys.path.append("./")
+
+# import sys
+# sys.path.insert(0, 'D:\sionna-main')
 
 from sionna.mimo import StreamManagement
 from sionna.ofdm import ResourceGrid, ResourceGridMapper, LSChannelEstimator, PilotPattern, KroneckerPilotPattern, LMMSEInterpolator, tdl_freq_cov_mat, tdl_time_cov_mat

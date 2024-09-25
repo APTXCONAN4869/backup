@@ -11,6 +11,7 @@ import tensorflow as tf
 from tensorflow import sin, cos, acos
 
 from sionna import PI, SPEED_OF_LIGHT
+import numpy as np 
 
 class Topology:
     # pylint: disable=line-too-long
@@ -181,6 +182,7 @@ class ChannelCoefficientsGenerator:
 
         # Step 10
         phi = self._step_10(tf.shape(rays.aoa))
+        # print('phi:------',phi)
 
         # Step 11
         h, delays = self._step_11(phi, topology, k_factor, rays, sample_times,
@@ -475,9 +477,10 @@ class ChannelCoefficientsGenerator:
         phi : [shape] + [4], tf.float
             Phases for all polarization combinations
         """
-        phi = tf.random.uniform(tf.concat([shape, [4]], axis=0), minval=-PI,
-            maxval=PI, dtype=self._dtype.real_dtype)
-
+        # phi = tf.random.uniform(tf.concat([shape, [4]], axis=0), minval=-PI,
+        #     maxval=PI, dtype=self._dtype.real_dtype)
+        phi = np.random.uniform(low=-PI, high=PI, size=tf.concat([shape, [4]], axis=0))
+        phi = tf.convert_to_tensor(phi, dtype=tf.float32)
         return phi
 
     def _step_11_phase_matrix(self, phi, rays):
@@ -499,6 +502,7 @@ class ChannelCoefficientsGenerator:
             Matrix with random phases in (7.5-22)
         """
         xpr = rays.xpr
+        print('xpr:-----',xpr)
 
         xpr_scaling = tf.complex(tf.sqrt(1/xpr),
             tf.constant(0., self._dtype.real_dtype))
@@ -808,7 +812,6 @@ class ChannelCoefficientsGenerator:
         h_full : [batch size, num_tx, num rx, num clusters, num rays, num rx antennas, num tx antennas, num time steps], tf.complex
             NLoS channel matrix
         """
-
         h_phase = self._step_11_phase_matrix(phi, rays)
         h_field = self._step_11_field_matrix(topology, rays.aoa, rays.aod,
                                                     rays.zoa, rays.zod, h_phase)
@@ -1003,8 +1006,9 @@ class ChannelCoefficientsGenerator:
         """
 
         h_full = self._step_11_nlos(phi, topology, rays, t)
+        # print('h_full:---------',h_full)
         h_nlos, delays_nlos = self._step_11_reduce_nlos(h_full, rays, c_ds)
-
+        # print('h_nlos:---------',h_nlos)
         ####  LoS scenario
 
         h_los_los_comp = self._step_11_los(topology, t)

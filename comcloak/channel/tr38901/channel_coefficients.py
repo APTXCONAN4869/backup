@@ -8,6 +8,7 @@ import torch
 
 from comcloak import PI, SPEED_OF_LIGHT
 from torch import sin, cos, acos
+import numpy as np
 
 def scatter_nd_torch(indices, updates, shape):
     # 创建一个初始张量
@@ -232,7 +233,7 @@ class ChannelCoefficientsGenerator:
             rays_aoa = rays.aoa
         # Step 10
         phi = self._step_10(rays_aoa.shape)
-
+        # print('phi:------',phi)
         # Step 11
         h, delays = self._step_11(phi, topology, k_factor, rays, sample_times,
                                                                         c_ds)
@@ -527,8 +528,9 @@ class ChannelCoefficientsGenerator:
         """
         shape_tensor = torch.tensor(shape, dtype=torch.int64)
         phi_shape = torch.cat([shape_tensor, torch.tensor([4])], dim=0)
-        phi = (torch.rand(tuple(phi_shape.tolist()), dtype=self._real_dtype) * 2 * PI) - PI
-
+        # phi = (torch.rand(tuple(phi_shape.tolist()), dtype=self._real_dtype) * 2 * PI) - PI
+        phi = np.random.uniform(low=-PI, high=PI, size=phi_shape.tolist())
+        phi = torch.tensor(phi, dtype=torch.float32)
         return phi
 
     def _step_11_phase_matrix(self, phi, rays):
@@ -550,6 +552,7 @@ class ChannelCoefficientsGenerator:
             Matrix with random phases in (7.5-22)
         """
         xpr = rays.xpr
+        print('xpr:-----',xpr)
 
         xpr_scaling = torch.complex(torch.sqrt(1/xpr.to(self._real_dtype)),
             torch.tensor(0., dtype=self._real_dtype))
@@ -857,7 +860,6 @@ class ChannelCoefficientsGenerator:
         h_full : [batch size, num_tx, num rx, num clusters, num rays, num rx antennas, num tx antennas, num time steps], torch.complex
             NLoS channel matrix
         """
-
         h_phase = self._step_11_phase_matrix(phi, rays)
         h_field = self._step_11_field_matrix(topology, rays.aoa, rays.aod, 
                                              rays.zoa, rays.zod, h_phase)
@@ -1049,10 +1051,11 @@ class ChannelCoefficientsGenerator:
         c_ds : [batch size, num TX, num RX], torch.float
             Cluster delay spread
         """
-
+        # ?rays
         h_full = self._step_11_nlos(phi, topology, rays, t)
+        # print('h_full:---------',h_full)
         h_nlos, delays_nlos = self._step_11_reduce_nlos(h_full, rays, c_ds)
-
+        # print('h_nlos:---------',h_nlos)
         ####  LoS scenario
 
         h_los_los_comp = self._step_11_los(topology, t)

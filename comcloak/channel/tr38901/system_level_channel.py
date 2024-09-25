@@ -230,6 +230,8 @@ class SystemLevelChannel(ChannelModel):
             sf = lsp.sf
 
         # pylint: disable=unbalanced-tuple-unpacking
+        # print('input:------------------',num_time_samples, sampling_frequency,
+        #                               k_factor, rays, topology, c_ds)
         h, delays = self._cir_sampler(num_time_samples, sampling_frequency,
                                       k_factor, rays, topology, c_ds)
 
@@ -239,12 +241,13 @@ class SystemLevelChannel(ChannelModel):
         # Reshaping to match the expected output
         h = h.permute(0, 2, 4, 1, 5, 3, 6)
         delays = delays.permute(0, 2, 1, 3)
+        # print('h:------',h)
 
         # Stop gadients to avoid useless backpropagation
         with torch.no_grad():
             h = h.clone()
             delays = delays.clone()
-        print('h:-------', h)
+        # print('h:-------', h)
         return h, delays
 
     def show_topology(self, bs_index=0, batch_index=0):

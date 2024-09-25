@@ -232,19 +232,22 @@ class SystemLevelChannel(ChannelModel):
             sf = lsp.sf
 
         # pylint: disable=unbalanced-tuple-unpacking
+        # print('input:------------------',num_time_samples, sampling_frequency,
+        #                               k_factor, rays, topology, c_ds)
         h, delays = self._cir_sampler(num_time_samples, sampling_frequency,
                                       k_factor, rays, topology, c_ds)
 
         # Step 12
+        # print('h:------',h)
         h = self._step_12(h, sf)
 
         # Reshaping to match the expected output
         h = tf.transpose(h, [0, 2, 4, 1, 5, 3, 6])
         delays = tf.transpose(delays, [0, 2, 1, 3])
-
+        # print('h:------',h)
         # Stop gadients to avoid useless backpropagation
         h = tf.stop_gradient(h)
-        print('h:------',h)
+        # print('h:------',h)
         delays = tf.stop_gradient(delays)
 
         return h, delays
