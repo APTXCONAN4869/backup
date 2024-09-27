@@ -822,6 +822,7 @@ class RaysGenerator:
 
         # XPR are assumed to follow a log-normal distribution.
         # Generate XPR in log-domain
+        #?
         x = torch.normal(mean=mu_xpr, std=std_xpr.expand(batch_size, num_bs, num_ut, num_clusters, num_rays_per_cluster))
         # To linear domain
         cross_polarization_power_ratios = torch.pow(torch.tensor(10.,
