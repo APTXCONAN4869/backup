@@ -6,7 +6,7 @@ import torch
 
 
 import os
-gpu_num = 0 # Use "" to use the CPU
+gpu_num = 3 # Use "" to use the CPU
 os.environ["CUDA_VISIBLE_DEVICES"] = f"{gpu_num}"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -76,9 +76,9 @@ send_interval = 1e-3       # producer 每 1 ms 发送一次（可以改）
 samples_per_chunk = int(sample_rate * send_interval)
 
 # 形状配置
-rx_ant = 16
+rx_ant = 1
 symbols_per_slot = 1135    # 每帧 1135 个复样点
-batch_size = 800             # 堆叠成 [batch_size, 1, 16, 1135]
+batch_size = 15000             # 堆叠成 [batch_size, 1, rx_ant, 1135]
 frame_shape = (rx_ant, symbols_per_slot, 2)  # 最后一维 [I, Q]
 dtype = np.int16
 # 队列容量
@@ -89,7 +89,7 @@ data_queue = queue.Queue(maxsize=max_queue)
 
 # The number of transmitted streams is equal to the number of UT antennas
 # in both uplink and downlink
-num_streams_per_tx = 4
+num_streams_per_tx = 1
 
 # Create an RX-TX association matrix
 # rx_tx_association[i,j]=1 means that receiver i gets at least one stream
@@ -120,11 +120,11 @@ n = int(rg.num_data_symbols*num_bits_per_symbol) # Number of coded bits
 k = int(n*coderate) # Number of information bits
 # The encoder maps information bits to coded bits
 
-ebno_db = 30
+ebno_db = 10
 no = ebnodb2no(ebno_db, num_bits_per_symbol, coderate, rg)
 encoder = LDPC5GEncoder(k, n)
 
-l_min = torch.tensor(-6, dtype=torch.int32)
+l_min = torch.tensor(0, dtype=torch.int32)
 demodulator = OFDMDemodulator(rg.fft_size, l_min, rg.cyclic_prefix_length)
 # The LS channel estimator will provide channel estimates and error variances
 ls_est = LSChannelEstimator(rg, interpolation_type="nn")

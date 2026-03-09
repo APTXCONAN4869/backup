@@ -19,7 +19,7 @@ except ImportError as e:
     import os
     import sys
     print("Current directory:", os.getcwd())
-    sys.path.append("d:\\sionna-main\\")
+    sys.path.append("/home/wzs/project/sionna-main/")
     # os.system("pip install comcloak")
     import comcloak
 
@@ -81,10 +81,11 @@ samples_per_chunk = int(sample_rate * send_interval)
 rx_ant = 1
 symbols_per_slot = 1135    # 每帧 1135 个复样点
 batch_size = 500             # 堆叠成 [batch_size, 1, rx_ant, 1135]
+# batch_size过大报错?比如5000
 frame_shape = (rx_ant, symbols_per_slot, 2)  # 最后一维 [I, Q]
 dtype = np.int16
 # 队列容量
-max_queue = 5000
+max_queue = 25000
 data_queue = queue.Queue(maxsize=max_queue)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

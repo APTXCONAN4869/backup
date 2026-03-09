@@ -19,7 +19,7 @@ except ImportError as e:
     import os
     import sys
     print("Current directory:", os.getcwd())
-    sys.path.append("d:\\sionna-main\\")
+    sys.path.append("/home/wzs/project/sionna-main/")
     # os.system("pip install comcloak")
     import comcloak
 
@@ -78,7 +78,7 @@ else:
 # 形状配置
 rx_ant = 1
 symbols_per_slot = 1135    # 每帧 1135 个复样点
-batch_size = 400             # 堆叠成 [batch_size, 1, rx_ant, 1135]
+batch_size = 1200             # 堆叠成 [batch_size, 1, rx_ant, 1135]
 frame_shape = (rx_ant, symbols_per_slot, 2)  # 最后一维 [I, Q]
 dtype = np.int16
 # 队列容量
@@ -159,7 +159,7 @@ decoder = LDPC5GDecoder(encoder, hard_out=True)
 stop_flag = threading.Event()
 bits_per_slot=encoder.k
 slots_per_frame=8
-packer = BinaryFramePacker("d:/sionna-main/practical/file.png", 
+packer = BinaryFramePacker("/home/wzs/project/sionna-main/practical/file.png", 
                             bits_per_slot=bits_per_slot,
                             slots_per_frame=slots_per_frame)
 frames = packer.pack()
@@ -236,7 +236,7 @@ def consumer():
 
             # 当累积 batch_size 帧时堆叠处理
             if len(buffer) == ceil(batch_size/slots_per_frame):
-                batch = torch.cat(buffer, axis=0)# .to(device)
+                batch = torch.cat(buffer, axis=0).to(device)
                 buffer.clear()
 
                 # rx_batch = tf.expand_dims(tf.convert_to_tensor(batch, dtype=tf.complex64), 1) 
@@ -245,12 +245,12 @@ def consumer():
                 h_hat, err_var = ls_est ([y, no])
                 x_hat, no_eff = lmmse_equ([y, h_hat, err_var, no])
                 llr = demapper([x_hat, no_eff])
-                # b_hat = decoder(llr)
-                # # torch.cuda.synchronize() if device == 'cuda' else None
-                # new = unpacker.push(b_hat)   # rx_bits.shape == [8*n,1,1,624]
-                # print(f"Number of New frames received: {new}")
+                b_hat = decoder(llr)
+                # torch.cuda.synchronize() if device == 'cuda' else None
+                new = unpacker.push(b_hat)   # rx_bits.shape == [8*n,1,1,624]
+                print(f"Number of New frames received: {new}")
                 if unpacker.is_complete():
-                    unpacker.recover_file("d:/sionna-main/practical/recv.png")
+                    unpacker.recover_file("/home/wzs/project/sionna-main/practical/recv.png")
                     print("File recovered!")
                 else:
                     print("Missing frames:", unpacker.missing_frames())
