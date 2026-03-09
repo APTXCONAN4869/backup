@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from typing import Callable, List
 # def gather_pytorch(input_data, indices=None, batch_dims=0, axis=0):
 #     input_data = torch.tensor(input_data)
@@ -116,7 +117,7 @@ def assert_type(tensor, expected_type):
     assert tensor.dtype == expected_type, f"Expected type {expected_type}, but got {tensor.dtype}"
 
 def arguments_check(params, indices, axis, batch_dims):
-    if not (isinstance(params, torch.Tensor) and isinstance(indices, (int, torch.Tensor)) and isinstance(axis, int) and isinstance(batch_dims, int)):
+    if not (isinstance(params, torch.Tensor) and isinstance(indices, (int, torch.Tensor, np.ndarray)) and isinstance(axis, int) and isinstance(batch_dims, int)):
         raise TypeError(
             f'my_gather() received an invalid combination of arguments - got {(type(params).__name__, type(indices).__name__, type(axis).__name__, type(batch_dims).__name__, )}, but expected one of:\n\
             *(Tensor params, int indices, int axis, int batch_dims)\n\
@@ -128,6 +129,8 @@ def arguments_check(params, indices, axis, batch_dims):
         )
     if isinstance(indices, int):
         return
+    if isinstance(indices, np.ndarray):
+        indices = torch.tensor(indices)
     if not -indices.dim() <= batch_dims <= indices.dim():
         raise ValueError(
             f'Expected batch_dims in the range [{-indices.dim()}, {indices.dim()-1}], but got {batch_dims}.'
@@ -144,7 +147,7 @@ def arguments_check(params, indices, axis, batch_dims):
                 f'params.shape[{index}]: {params.shape[index]} should be equal to indices.shape[{index}]: {indices.shape[index]}.'
             )
 
-def gather_pytorch(params: torch.Tensor, indices: int | torch.Tensor, axis: int = 0, batch_dims: int = 0):
+def gather_pytorch(params: torch.Tensor, indices: int | torch.Tensor | np.ndarray, axis: int = 0, batch_dims: int = 0):
     if axis == 0:
         batch_dims = 0
     arguments_check(params, indices, axis, batch_dims)
@@ -152,6 +155,8 @@ def gather_pytorch(params: torch.Tensor, indices: int | torch.Tensor, axis: int 
     if isinstance(indices, int):
         return params.select(dim=axis, index=indices)
     else:
+        if isinstance(indices, np.ndarray):
+            indices = torch.tensor(indices)
         batch_dims = batch_dims if batch_dims >= 0 else indices.dim()+batch_dims
         output_shape = params.shape[:axis] + indices.shape[batch_dims:] + params.shape[axis+1:]
         indices = indices.to(params.device)

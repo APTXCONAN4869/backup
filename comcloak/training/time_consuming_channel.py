@@ -1263,3 +1263,118 @@ class ChannelMatrix(Block):
 # lmmse_posteq_sinr = LMMSEPostEqualizationSINR(resource_grid=resource_grid, stream_management=stream_management)
 # # [batch_size, num_ofdm_symbols, num_effective_subcarriers, num_rx, num_streams_per_rx]
 # sinr = lmmse_posteq_sinr(h_eff, no=no)[0, ...]
+
+import tensorflow as tf
+
+# class MixedMCSBatch:
+#     def __init__(self, c_mcs, llrs, bit_mask, mcs_id):
+#         # 假设数据已经通过 padding 到相同长度，max_bits 为最大比特数
+#         self.max_bits = 8352  # 根据最大 MCS 长度决定
+#         self.c_mcs = self.pad(c_mcs)
+#         self.llrs = self.pad(llrs, is_llrs=True)
+#         self.bit_mask = self.pad(bit_mask)
+#         self.mcs_id = mcs_id
+        
+#         # 获取 batch_size
+#         self.batch_size = tf.shape(self.c_mcs)[0]
+
+#         # 生成打乱和逆打乱索引
+#         self.perm = tf.random.shuffle(tf.range(self.batch_size))
+#         self.inv_perm = tf.argsort(self.perm)
+
+#     def pad(self, data, is_llrs=False):
+#         """ 对输入数据进行 padding 处理，确保每个 batch 的数据长度一致 """
+#         if is_llrs:
+#             # 处理 llrs 数据，填充到最大比特数
+#             padded_data = tf.image.resize_with_crop_or_pad(data, target_height=self.max_bits // 6, target_width=self.max_bits)
+#         else:
+#             # 处理其他数据，填充到最大比特数
+#             padded_data = tf.image.resize_with_crop_or_pad(data, target_height=self.max_bits)
+#         return padded_data
+
+#     def shuffle(self):
+#         """ 使用统一的 permutation 索引打乱数据 """
+#         self.c_mcs_shuf = tf.gather(self.c_mcs, self.perm, axis=0)
+#         self.llrs_shuf = tf.gather(self.llrs, self.perm, axis=0)
+#         self.bit_mask_shuf = tf.gather(self.bit_mask, self.perm, axis=0)
+#         self.mcs_id_shuf = tf.gather(self.mcs_id, self.perm, axis=0)
+
+#     def restore(self):
+#         """ 使用逆索引恢复数据顺序 """
+#         self.c_mcs_restored = tf.gather(self.c_mcs_shuf, self.inv_perm, axis=0)
+#         self.llrs_restored = tf.gather(self.llrs_shuf, self.inv_perm, axis=0)
+#         self.bit_mask_restored = tf.gather(self.bit_mask_shuf, self.inv_perm, axis=0)
+#         self.mcs_id_restored = tf.gather(self.mcs_id_shuf, self.inv_perm, axis=0)
+
+#     def compute_loss(self, llr_hat):
+#         """ 计算交叉熵损失（仅计算有效比特） """
+#         # 将 llr_hat 的形状调整为与 c_mcs 一致
+#         llr_hat_bits = tf.reshape(llr_hat, [self.batch_size, self.max_bits])
+
+#         # 计算交叉熵损失，结合 mask 只计算有效比特
+#         loss_per_bit = tf.nn.sigmoid_cross_entropy_with_logits(labels=self.c_mcs_shuf, logits=llr_hat_bits)
+#         loss = tf.reduce_sum(loss_per_bit * self.bit_mask_shuf) / tf.reduce_sum(self.bit_mask_shuf)
+
+#         return loss
+
+#     def compute_ber(self, llr_hat):
+#         """ 计算 BER（按 MCS 类型分） """
+#         llr_hat_bits = tf.reshape(llr_hat, [self.batch_size, self.max_bits])
+
+#         ber_per_bit = tf.cast(tf.not_equal(llr_hat_bits > 0, self.c_mcs_shuf > 0), tf.float32) * self.bit_mask_shuf
+
+#         # 按 MCS 类型计算 BER
+#         ber_by_mcs = {}
+#         for mcs in [0, 1, 2]:
+#             idx = tf.where(self.mcs_id_shuf == mcs)[:, 0]
+#             ber_by_mcs[mcs] = tf.reduce_sum(tf.gather(ber_per_bit, idx, axis=0)) / tf.reduce_sum(
+#                 tf.gather(self.bit_mask_shuf, idx, axis=0)
+#             )
+#         return ber_by_mcs
+
+class MixedMCSBatch:
+    def __init__(self, tensor, shuffle_indices):
+        self.tensor = tensor
+        
+        # # 获取 batch_size
+        # self.batch_size = tf.shape(self.tensor)[0]
+
+        # 生成打乱和逆打乱索引
+        # self.perm = tf.random.shuffle(tf.range(self.batch_size))
+        self.perm = shuffle_indices
+        self.inv_perm = tf.argsort(self.perm)
+
+    def shuffle(self):
+        """ 使用统一的 permutation 索引打乱数据 """
+        self.tensor_shuf = tf.gather(self.tensor, self.perm, axis=0)
+
+    def restore(self):
+        """ 使用逆索引恢复数据顺序 """
+        self.tensor_restored = tf.gather(self.tensor_shuf, self.inv_perm, axis=0)
+
+
+# # 使用示例：
+# # 假设 c_mcs, llrs, bit_mask, mcs_id 是你传入的张量
+
+# c_mcs = [tf.random.normal((100, 1, 1, 2784)), tf.random.normal((100, 1, 1, 5568)), tf.random.normal((100, 1, 1, 8352))]
+# llrs = [tf.random.normal((100, 1, 1, 1392, 2)), tf.random.normal((100, 1, 1, 1392, 4)), tf.random.normal((100, 1, 1, 1392, 6))]
+# bit_mask = tf.random.normal((300, 1, 1, 8352))
+# mcs_id = tf.random.uniform((300,), minval=0, maxval=3, dtype=tf.int32)
+
+# # 创建 MixedMCSBatch 实例
+# batch = MixedMCSBatch(c_mcs, llrs, bit_mask, mcs_id)
+
+# # 打乱数据
+# batch.shuffle()
+
+# # 假设网络输出为 llr_hat
+# llr_hat = tf.random.normal((300, 1, 1, 1392, 6))
+
+# # 计算损失
+# loss = batch.compute_loss(llr_hat)
+# print(f"Loss: {loss.numpy()}")
+
+# # 计算 BER
+# ber = batch.compute_ber(llr_hat)
+# for mcs, mcs_ber in ber.items():
+#     print(f"BER for MCS {mcs}: {mcs_ber.numpy()}")
